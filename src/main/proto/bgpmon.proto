@@ -1,0 +1,170 @@
+syntax="proto3";
+
+option java_package = "edu.colostate.netsec";
+
+service Bgpmon {
+    rpc CloseSession(CloseSessionRequest) returns (CloseSessionReply) {}
+    rpc ListSessions(ListSessionsRequest) returns (ListSessionsReply) {}
+    rpc OpenSession(OpenSessionRequest) returns (OpenSessionReply) {}
+
+    rpc ListModules(ListModulesRequest) returns (ListModulesReply) {}
+    rpc RunModule(RunModuleRequest) returns (RunModuleReply) {}
+    rpc StartModule(StartModuleRequest) returns (StartModuleReply) {}
+    rpc StopModule(StopModuleRequest) returns (StopModuleReply) {}
+
+    rpc Write(stream WriteRequest) returns (Empty) {}
+}
+
+message Empty {
+}
+
+message IPPrefix {
+    string prefix_ip_address = 1;
+    uint32 prefix_mask = 2;
+}
+
+message MonitorIPPrefix {
+    uint32 as_number = 1;
+    IPPrefix ip_prefix = 2;
+}
+
+/**
+ * Session Messages
+ */
+
+enum SessionType {
+    CASSANDRA = 0;
+}
+
+message Session {
+    SessionType session_type = 1;
+    CassandraSession cassandra_session = 2;
+    string session_id = 3;
+}
+
+message CassandraSession {
+    string username = 1;
+    string password = 2;
+    repeated string host =3;
+}
+
+/**
+ * Session Commands
+ */
+
+message CloseSessionReply {
+    bool success = 1;
+}
+
+message CloseSessionRequest {
+    string session_id = 1;
+}
+
+message ListSessionsReply {
+    repeated Session session = 1;
+}
+
+message ListSessionsRequest {
+    repeated string session_id = 1;
+}
+
+message OpenSessionReply {
+    bool success = 1;
+}
+
+message OpenSessionRequest {
+    SessionType session_type = 1;
+    CassandraSession cassandra_session = 2;
+    string session_id = 3;
+}
+
+/**
+ * Module Messages
+ */
+
+enum ModuleType {
+    GO_BGP_LINK = 0;
+    PREFIX_BY_AS_NUMBER = 1;
+    PREFIX_HIJACK = 2;
+}
+
+message Module {
+    ModuleType module_type = 1;
+    PrefixHijackModule prefix_hijack_module = 2;
+    string module_id = 3;
+}
+
+message PrefixHijackModule {
+    repeated MonitorIPPrefix monitor_prefix = 1;
+    repeated string in_session_id = 3;
+}
+
+/**
+ * Module Commands
+ */
+
+message ListModulesReply {
+    repeated Module running_module = 1;
+    repeated Module started_module = 2;
+}
+
+message ListModulesRequest {
+    repeated string module_id = 1;
+}
+
+
+message RunModuleReply {
+    bool success = 1;
+}
+
+message RunModuleRequest {
+    ModuleType module_type = 1;
+    PrefixHijackModule prefix_hijack_module = 2;
+    string module_id = 3;
+}
+
+message StartModuleReply {
+    bool success = 1;
+}
+
+message StartModuleRequest {
+    ModuleType module_type = 1;
+    PrefixHijackModule prefix_hijack_module = 2;
+    string module_id = 3;
+    int32 execution_delay = 4;
+}
+
+message StopModuleReply {
+    bool success = 1;
+}
+
+message StopModuleRequest {
+    string module_id = 1;
+}
+
+/**
+ * Write Messages
+ */
+
+enum WriteType {
+    BGP_UPDATE = 0;
+}
+
+message WriteRequest {
+    WriteType write_type = 1;
+    BGPUpdate bgp_update = 2;
+}
+
+message BGPUpdate {
+    int64 timestamp = 1;
+    string collector_ip_address = 2;
+    string collector_mac_address = 3;
+    uint32 collector_port = 4;
+    string peer_ip_address = 5;
+
+    repeated uint32 as_path = 6;
+    string next_hop = 7;
+
+    repeated IPPrefix advertised_prefixes = 8;
+    repeated IPPrefix withdrawn_prefixes = 9;
+}

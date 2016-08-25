@@ -1,0 +1,59 @@
+apply plugin: 'java'
+apply plugin: 'com.google.protobuf'
+
+//build repositories and dependencies
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile 'com.google.protobuf:protobuf-gradle-plugin:0.8.0'
+    compile 'io.grpc:grpc-netty:1.0.0'
+    compile 'io.grpc:grpc-protobuf:1.0.0'
+    compile 'io.grpc:grpc-stub:1.0.0'
+
+    compile 'com.datastax.cassandra:cassandra-driver-core:3.1.0'
+
+    compile 'com.offbytwo:docopt:0.6.0.20150202'
+}
+
+//protobuf build definitions
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.0'
+    }
+}
+
+protobuf {
+    protoc {
+        artifact = 'com.google.protobuf:protoc:3.0.0'
+    }
+
+    plugins {
+        grpc {
+            artifact = 'io.grpc:protoc-gen-grpc-java:1.0.0'
+        }
+    }
+
+    generateProtoTasks {
+        all()*.plugins {
+            grpc {}
+        }
+    }
+}
+
+//application tasks
+task execute(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    if(project.hasProperty('mainClass')) {
+        main = mainClass
+    }
+
+    if(project.hasProperty('myArgs')) {
+        args(myArgs.split(','))
+    }
+}
