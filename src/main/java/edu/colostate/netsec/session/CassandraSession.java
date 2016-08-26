@@ -10,8 +10,8 @@ import com.datastax.driver.core.Cluster;
 
 public class CassandraSession extends Session {
     private final int PORT = 9042;
+    protected final com.datastax.driver.core.Session session;
     private BgpmonOuterClass.CassandraSession protobufSession;
-    protected com.datastax.driver.core.Session session;
 
     public CassandraSession(String sessionId, BgpmonOuterClass.CassandraSession protobufSession, Map<String, Session> sessions) {
         super(sessionId, sessions);
@@ -24,6 +24,10 @@ public class CassandraSession extends Session {
                                 .build();
 
         session = cluster.connect();
+    }
+
+    public com.datastax.driver.core.Session getDatastaxSession() {
+        return this.session;
     }
 
     @Override

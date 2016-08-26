@@ -96,7 +96,7 @@ message Module {
 
 message PrefixHijackModule {
     repeated MonitorIPPrefix monitor_prefix = 1;
-    repeated string in_session_id = 3;
+    string session_id = 2;
 }
 
 /**

@@ -168,7 +168,12 @@ public class BgpmonServer {
             Module module = null;
             switch(request.getModuleType()) {
                 case PREFIX_HIJACK:
-                    module = new PrefixHijackModule(request.getModuleId(), request.getPrefixHijackModule(), runningModules);
+                    Session session = sessions.get(request.getPrefixHijackModule().getSessionId());
+                    if(session == null) {
+                        //TODO throw new Exception("Unknown Session Id");
+                    }
+
+                    module = new PrefixHijackModule(request.getModuleId(), session, request.getPrefixHijackModule(), runningModules);
                     break;
                 default:
                     //TODO throw new Exception("Uknown Module Type");
@@ -191,7 +196,12 @@ public class BgpmonServer {
             Module module = null;
             switch(request.getModuleType()) {
                 case PREFIX_HIJACK:
-                    module = new PrefixHijackModule(request.getModuleId(), request.getPrefixHijackModule(), startedModules);
+                    Session session = sessions.get(request.getPrefixHijackModule().getSessionId());
+                    if(session == null) {
+                        //TODO throw new Exception("Unknown Session Id");
+                    }
+
+                    module = new PrefixHijackModule(request.getModuleId(), session, request.getPrefixHijackModule(), startedModules);
                     break;
                 default:
                     //TODO throw new Exception("Unknown Module Type");

@@ -80,15 +80,21 @@ public class BgpmonClient {
             }
         } else if((Boolean)opts.get("open")) {
             if((Boolean)opts.get("cassandra")) {
-                client.openCassandraSession((String)opts.get("<username>"), (String)opts.get("<password>"), (List<String>)opts.get("<host>"), (String)opts.get("<sid>"));
+                client.openCassandraSession((String)opts.get("<username>"), (String)opts.get("<password>"), (List<String>)opts.get("<host>"), (String)opts.get("--session_id"));
             }
         } else if((Boolean)opts.get("run")) {
             if((Boolean)opts.get("prefix-hijack")) {
-                client.runPrefixHijackModule((String)opts.get("<module_id>"), (String)opts.get("--file"), (String)opts.get("--prefix"));
+                client.runPrefixHijackModule((String)opts.get("<module_id>"), (String)opts.get("<session_id>"), (String)opts.get("--file"), (String)opts.get("--prefix"));
             }
         } else if((Boolean)opts.get("start")) {
             if((Boolean)opts.get("prefix-hijack")) {
-                client.startPrefixHijackModule((String)opts.get("<module_id>"), (String)opts.get("--file"), (String)opts.get("--prefix"), Integer.parseInt((String)opts.get("--delay")));
+                client.startPrefixHijackModule(
+                    (String)opts.get("<module_id>"),
+                    (String)opts.get("<session_id>"),
+                    (String)opts.get("--file"),
+                    (String)opts.get("--prefix"),
+                    Integer.parseInt((String)opts.get("--delay"))
+                );
             }
         } else if((Boolean)opts.get("stop")) {
             client.stop((String)opts.get("<module_id>"));
@@ -176,9 +182,10 @@ public class BgpmonClient {
         }
     }
 
-    public void runPrefixHijackModule(String moduleId, String filename, String prefix) {
+    public void runPrefixHijackModule(String moduleId, String sessionId, String filename, String prefix) {
         PrefixHijackModule module = PrefixHijackModule.newBuilder()
                                                     .addAllMonitorPrefix(processIPPrefix(prefix, filename))
+                                                    .setSessionId(sessionId)
                                                     .build();
 
         RunModuleRequest request = RunModuleRequest.newBuilder()
@@ -192,9 +199,10 @@ public class BgpmonClient {
         System.out.println("RUN MODULE SUCCESS:" + reply.getSuccess());
     }
 
-    public void startPrefixHijackModule(String moduleId, String filename, String prefix, int executionDelay) {
+    public void startPrefixHijackModule(String moduleId, String sessionId, String filename, String prefix, int executionDelay) {
         PrefixHijackModule module= PrefixHijackModule.newBuilder()
                                                     .addAllMonitorPrefix(processIPPrefix(prefix, filename))
+                                                    .setSessionId(sessionId)
                                                     .build();
 
         StartModuleRequest request = StartModuleRequest.newBuilder()
