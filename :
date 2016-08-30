@@ -82,6 +82,7 @@ public class PrefixHijackModule extends Module {
 
     @Override
     public void execute() {
+        System.out.println("TODO process execute");
         com.datastax.driver.core.Session session = null;
         if(this.session instanceof CassandraSession) {
             session = ((CassandraSession)this.session).getDatastaxSession();
@@ -106,6 +107,8 @@ public class PrefixHijackModule extends Module {
                 new FutureCallback<ResultSet>() {
                     @Override
                     public void onSuccess(ResultSet resultSet) {
+                        System.out.println("TODO handle resultset for " + monitorPrefix + " : " + monitorPrefix.minInetAddress + "-" + monitorPrefix.maxInetAddress + " date:" + timeBucket);
+
                         Iterator<Row> iterator = resultSet.iterator();
                         while(iterator.hasNext()) {
                             Row row = iterator.next();
@@ -125,7 +128,7 @@ public class PrefixHijackModule extends Module {
                             //check for existance of potential hijack
                             rwl.readLock().lock();
                             try {
-                                if(potentialHijacks.containsKey(timeuuid)) {
+                                if(potentialHijacks.containsKey(timeuuid) {
                                     continue;
                                 }
                             } finally {
@@ -135,12 +138,18 @@ public class PrefixHijackModule extends Module {
                             //add hijack to potential hijacks
                             rwl.writeLock().lock();
                             try {
-                                //TODO query csu_bgp_core.update_messages_by_time to get all other information from message (as path, collector_ip_address, etc)
-                                potentialHijacks.put(timeuuid, new PrefixHijack(timestamp, inetAddress, mask));
-                                System.out.println("\tHIJACK!:" + asNumber + ":" + inetAddress + "/" + mask + " - " + timestamp);
+                                potentialHijacks.put(
+                                    timeuuid,
+                                    new PrefixHijack(
+
+                                        )
+                                    );
+                                //TODO add
                             } finally {
                                 rwl.writeLock().unlock();
                             }
+
+                            System.out.println("\tHIJACK!:" + asNumber + ":" + inetAddress + "/" + mask + " - " + timestamp);
                         }
                     }
 
@@ -222,14 +231,15 @@ public class PrefixHijackModule extends Module {
     }
 
     private class PrefixHijack {
-        public Date timestamp;
-        public InetAddress inetAddress;
+        public Timestamp timestamp;
+        public InetAddress inetAddress, collectorInetAddress;
         public int mask;
 
-        public PrefixHijack(Date timestamp, InetAddress inetAddress, int mask) {
+        public PrefixHijack(Timestamp timestamp, InetAddress inetAddress, int mask, InetAddress collectorInetAddress) {
             this.timestamp = timestamp;
             this.inetAddress = inetAddress;
             this.mask = mask;
+            this.collectorInetAddress = collectorInetAddress;
         }
     }
 }
