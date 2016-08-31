@@ -15,6 +15,7 @@ gradle -PmainClass='edu.colostate.netsec.BgpmonClient' -PmyArgs='write,mrt-file,
 
 ##TODO
 prefix hijack module
+    run on today and yesterday (data isn't being inserted quckly enough)
     error handling - should execute() throw Exception?
     query csu_bgp_core.update_messages_by_time for additional information
 

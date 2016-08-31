@@ -263,16 +263,15 @@ public class BgpmonClient {
     }
 
     private MonitorIPPrefix parseIPPrefix(String line) throws Exception {
-        String[] x = line.split(":");
-        String[] y = x[1].split("/");
+        String[] fields = line.split(",");
 
         IPPrefix ipPrefix = IPPrefix.newBuilder()
-                                    .setPrefixIpAddress(y[0])
-                                    .setPrefixMask(Integer.parseInt(y[1]))
+                                    .setPrefixIpAddress(fields[1].trim())
+                                    .setPrefixMask(Integer.parseInt(fields[2]))
                                     .build();
 
         MonitorIPPrefix monitorIPPrefix = MonitorIPPrefix.newBuilder()
-                                                        .setAsNumber(Integer.parseInt(x[0]))
+                                                        .setAsNumber(Integer.parseInt(fields[0]))
                                                         .setIpPrefix(ipPrefix)
                                                         .build();
 
