@@ -7,6 +7,7 @@ import edu.colostate.netsec.BgpmonOuterClass;
 import edu.colostate.netsec.BgpmonOuterClass.BGPUpdate;
 import edu.colostate.netsec.BgpmonOuterClass.SessionType;
 import edu.colostate.netsec.BgpmonOuterClass.WriteRequest;
+import edu.colostate.netsec.BgpmonOuterClass.WriteType;
 
 import com.datastax.driver.core.Cluster;
 
@@ -37,19 +38,67 @@ public class CassandraSession extends Session {
     }
 
     @Override
-    public void write(WriteRequest request) {
+    public void write(String writeToken, WriteRequest request) {
+        System.err.println("write unimplemented!");
+
         switch(request.getWriteType()) {
             case BGP_UPDATE:
-                writeBGPUpdate(request.getBgpUpdate());
                 break;
             default:
                 //TODO throw new Exception("Unsupported Write Type");
         }
     }
 
-    public void writeBGPUpdate(BGPUpdate bgpUpdate) {
-        
+    @Override
+    public String generateWriteToken(WriteType writeType) {
+        return "";
     }
+
+    @Override
+    public void destroyWriteToken(String writeToken) {
+
+    }
+
+    /*@Override
+    public void writeBatch(WriteBatchRequest request) {
+        switch(request.getWriteType()) {
+            case BGP_UPDATE:
+                //iniitalize prepared statement
+                PreparedStatement preparedTime = this.session.prepare(UPDATE_MESSAGES_BY_TIME);
+                PreparedStatement preparedPrefixRange = this.session.prepare(AS_NUMBER_BY_PREFIX_RANGE);
+
+                //loop through messages
+                for(BGPUpdate bgpUpdate : request.getBGPUpdateList()) {
+                    BoundStatement boundTime = preparedTime.bind(
+                        //time_bucket
+                        //timestamp
+                        //advertised_prefixes
+                        //as_path
+                        //collector_ip_address
+                        //collector_mac_address
+                        //collector_port
+                        //next_hop
+                        //peer_ip_address
+                        //withdrawn_prefixes
+                    );
+
+                    BoundStatement boundPrefixRange = preparedPrefixRange.bind(
+                        //time_bucket
+                        //prefix_ip_address
+                        //prefix_mask
+                        //timestamp
+                        //as_number
+                    );
+
+                    this.session.execute(boundTime);
+                    this.session.execute(boundPrefixRange);
+                }
+
+                break;
+            default:
+                //TODO throw new Exception("Unsupported Write Type");
+        }
+    }*/
 
     @Override
     public BgpmonOuterClass.Session getProtobufSession() {

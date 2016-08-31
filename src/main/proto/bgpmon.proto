@@ -150,6 +150,16 @@ enum WriteType {
     BGP_UPDATE = 0;
 }
 
+message WriteBatchRequest {
+    WriteType write_type = 1;
+    repeated BGPUpdate bgp_update = 2;
+    string session_id = 3;
+}
+
+message WriteBatchReply {
+    bool success = 1;
+}
+
 message WriteRequest {
     WriteType write_type = 1;
     BGPUpdate bgp_update = 2;

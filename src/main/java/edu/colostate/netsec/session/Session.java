@@ -3,6 +3,7 @@ package edu.colostate.netsec.session;
 import java.util.Map;
 
 import edu.colostate.netsec.BgpmonOuterClass;
+import edu.colostate.netsec.BgpmonOuterClass.WriteType;
 import edu.colostate.netsec.BgpmonOuterClass.WriteRequest;
 
 public abstract class Session {
@@ -19,7 +20,10 @@ public abstract class Session {
         sessions.remove(sessionId);
     }
 
-    public abstract void write(WriteRequest request);
+    public abstract void write(String writeToken, WriteRequest request);
+    public abstract String generateWriteToken(WriteType writeType);
+    public abstract void destroyWriteToken(String writeToken);
+
     public abstract BgpmonOuterClass.Session getProtobufSession();
     public abstract void destroy();
 }

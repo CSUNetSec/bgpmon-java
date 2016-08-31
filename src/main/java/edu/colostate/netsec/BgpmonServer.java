@@ -19,7 +19,10 @@ import edu.colostate.netsec.BgpmonOuterClass.ListModulesRequest;
 import edu.colostate.netsec.BgpmonOuterClass.ListModulesReply;
 import edu.colostate.netsec.BgpmonOuterClass.ListSessionsRequest;
 import edu.colostate.netsec.BgpmonOuterClass.ListSessionsReply;
+import edu.colostate.netsec.BgpmonOuterClass.WriteBatchRequest;
+import edu.colostate.netsec.BgpmonOuterClass.WriteBatchReply;
 import edu.colostate.netsec.BgpmonOuterClass.WriteRequest;
+import edu.colostate.netsec.BgpmonOuterClass.WriteType;
 import edu.colostate.netsec.BgpmonOuterClass.SessionType;;
 import edu.colostate.netsec.BgpmonOuterClass.RunModuleReply;;
 import edu.colostate.netsec.BgpmonOuterClass.RunModuleRequest;;
@@ -237,32 +240,57 @@ public class BgpmonServer {
          */
         @Override
         public StreamObserver<WriteRequest> write(StreamObserver<Empty> responseObserver) {
+            Map<String, Map<WriteType, String>> sessionWriteTokens = new HashMap<String, Map<WriteType, String>>();
+
             return new StreamObserver<WriteRequest>() {
                 @Override
                 public void onNext(WriteRequest request) {
-                    Session session = sessions.get(request.getSessionId());
+                    //find session for write
+                    String sessionId = request.getSessionId();
+                    Session session = sessions.get(sessionId);
                     if(session == null) {
                         //TODO throw new Exception("Unknown Session Id");
                     }
 
-                    session.write(request);
-                    /*switch(request.getWriteType()) {
-                        case BGP_UPDATE:
-                            BGPUpdate bgpUpdate = request.getBgpUpdate();
-                            break;
-                        default:
-                            //TODO throw new Exception("Unknown Write Type");
-                    }*/
+                    //determine write token
+                    Map<WriteType, String> writeTokens = sessionWriteTokens.get(sessionId);
+                    if(writeTokens == null) {
+                        writeTokens = new HashMap<WriteType, String>();
+                        sessionWriteTokens.put(sessionId, writeTokens);
+                    }
+
+                    String writeToken = writeTokens.get(request.getWriteType());
+                    if(writeToken == null) {
+                        writeToken = session.generateWriteToken(request .getWriteType());
+                        writeTokens.put(request.getWriteType(), writeToken);
+                    }
+
+                    //submit write
+                    session.write(writeToken, request);
                 }
 
                 @Override
                 public void onError(Throwable t) {
-
+                    //destory write tokens over all sessions
+                    for(String sessionId : sessionWriteTokens.keySet()) {
+                        Session session = sessions.get(sessionId);
+                        
+                        for(String writeToken : sessionWriteTokens.get(sessionId).values()) {
+                            session.destroyWriteToken(writeToken);
+                        }
+                    }
                 }
 
                 @Override
                 public void onCompleted() {
-
+                    //destory write tokens over all sessions
+                    for(String sessionId : sessionWriteTokens.keySet()) {
+                        Session session = sessions.get(sessionId);
+                        
+                        for(String writeToken : sessionWriteTokens.get(sessionId).values()) {
+                            session.destroyWriteToken(writeToken);
+                        }
+                    }
                 }
             };
         }
