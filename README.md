@@ -19,6 +19,7 @@ prefix hijack module
     error handling - should execute() throw Exception?
     query csu_bgp_core.update_messages_by_time for additional information
 
-write bgp functionality server side
+write bgp
+    parse and transform message parts to insert
 
 don't let people see sessions that haven't created (username, password)
