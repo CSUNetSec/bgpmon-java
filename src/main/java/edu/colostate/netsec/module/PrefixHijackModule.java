@@ -52,8 +52,7 @@ public class PrefixHijackModule extends Module {
             try {
                 inetAddress = InetAddress.getByName(ipPrefix.getPrefixIpAddress().trim());
             } catch(Exception e) {
-                e.printStackTrace();
-                System.exit(1);
+                System.err.println("Unable to parse IP Address");
                 //TODO handle exception
             }
 
@@ -137,7 +136,7 @@ public class PrefixHijackModule extends Module {
                             try {
                                 //TODO query csu_bgp_core.update_messages_by_time to get all other information from message (as path, collector_ip_address, etc)
                                 potentialHijacks.put(timeuuid, new PrefixHijack(timestamp, inetAddress, mask));
-                                System.out.println("\tHIJACK!:" + asNumber + ":" + inetAddress + "/" + mask + " - " + timestamp);
+                                System.out.println("\tHIJACK!:" + timeuuid + " -- " + asNumber + ":" + inetAddress + "/" + mask + " - " + timestamp + " FOR MONITORED " + monitorPrefix);
                             } finally {
                                 rwl.writeLock().unlock();
                             }

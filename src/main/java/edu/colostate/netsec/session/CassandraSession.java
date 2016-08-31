@@ -17,6 +17,7 @@ public class CassandraSession extends Session {
         super(sessionId, sessions);
         this.protobufSession = protobufSession;
 
+        //connect to cassandra session
         Cluster cluster = Cluster.builder()
                                 .addContactPoints(protobufSession.getHostList().toArray(new String[protobufSession.getHostList().size()]))
                                 .withPort(PORT)
