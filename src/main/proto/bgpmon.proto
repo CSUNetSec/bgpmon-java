@@ -153,6 +153,7 @@ enum WriteType {
 message WriteRequest {
     WriteType write_type = 1;
     BGPUpdate bgp_update = 2;
+    string session_id = 3;
 }
 
 message BGPUpdate {

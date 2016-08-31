@@ -12,7 +12,6 @@ import io.grpc.stub.StreamObserver;
 
 import edu.colostate.netsec.BgpmonGrpc.BgpmonImplBase;
 import edu.colostate.netsec.BgpmonOuterClass;
-import edu.colostate.netsec.BgpmonOuterClass.BGPUpdate;
 import edu.colostate.netsec.BgpmonOuterClass.Empty;
 import edu.colostate.netsec.BgpmonOuterClass.CloseSessionRequest;
 import edu.colostate.netsec.BgpmonOuterClass.CloseSessionReply;
@@ -241,13 +240,19 @@ public class BgpmonServer {
             return new StreamObserver<WriteRequest>() {
                 @Override
                 public void onNext(WriteRequest request) {
-                    switch(request.getWriteType()) {
+                    Session session = sessions.get(request.getSessionId());
+                    if(session == null) {
+                        //TODO throw new Exception("Unknown Session Id");
+                    }
+
+                    session.write(request);
+                    /*switch(request.getWriteType()) {
                         case BGP_UPDATE:
-                            BGPUpdate bgpUpdate = request.getBgpUpdate();                            
+                            BGPUpdate bgpUpdate = request.getBgpUpdate();
                             break;
                         default:
                             //TODO throw new Exception("Unknown Write Type");
-                    }
+                    }*/
                 }
 
                 @Override
