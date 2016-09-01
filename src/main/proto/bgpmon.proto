@@ -169,13 +169,13 @@ message WriteRequest {
 message BGPUpdate {
     int64 timestamp = 1;
     string collector_ip_address = 2;
-    string collector_mac_address = 3;
+    bytes collector_mac_address = 3;
     uint32 collector_port = 4;
     string peer_ip_address = 5;
 
     repeated uint32 as_path = 6;
     string next_hop = 7;
 
-    repeated IPPrefix advertised_prefixes = 8;
-    repeated IPPrefix withdrawn_prefixes = 9;
+    repeated IPPrefix advertised_prefix = 8;
+    repeated IPPrefix withdrawn_prefix = 9;
 }

@@ -20,6 +20,6 @@ prefix hijack module
     query csu_bgp_core.update_messages_by_time for additional information
 
 write bgp
-    parse and transform message parts to insert
+    parse advertised/withdrawn prefixes
 
 don't let people see sessions that haven't created (username, password)

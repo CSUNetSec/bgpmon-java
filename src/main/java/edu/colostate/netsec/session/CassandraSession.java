@@ -1,18 +1,25 @@
 package edu.colostate.netsec.session;
 
+import java.net.InetAddress;
+import java.sql.Timestamp;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.UUID;
 
 import edu.colostate.netsec.BgpmonOuterClass;
 import edu.colostate.netsec.BgpmonOuterClass.BGPUpdate;
+import edu.colostate.netsec.BgpmonOuterClass.IPPrefix;
 import edu.colostate.netsec.BgpmonOuterClass.SessionType;
 import edu.colostate.netsec.BgpmonOuterClass.WriteRequest;
 import edu.colostate.netsec.BgpmonOuterClass.WriteType;
 
 import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.PreparedStatement;
+import com.datastax.driver.core.utils.UUIDs;
 
 public class CassandraSession extends Session {
     private final int UPDATE_MESSAGES_BY_TIME = 1;
@@ -23,7 +30,8 @@ public class CassandraSession extends Session {
     private final int PORT = 9042;
     protected final com.datastax.driver.core.Session session;
     protected final Map<String, Map<Integer, PreparedStatement>> writeTokens = new HashMap<String, Map<Integer, PreparedStatement>>();
-    private BgpmonOuterClass.CassandraSession protobufSession;
+    protected Random random = new Random();
+    protected BgpmonOuterClass.CassandraSession protobufSession;
 
     public CassandraSession(String sessionId, BgpmonOuterClass.CassandraSession protobufSession, Map<String, Session> sessions) {
         super(sessionId, sessions);
@@ -48,44 +56,68 @@ public class CassandraSession extends Session {
         switch(request.getWriteType()) {
             case BGP_UPDATE:
                 BGPUpdate bgpUpdate = request.getBgpUpdate();
-                Map<String, PreparedStatement> statements = writeTokens.get(writeToken);
+                Map<Integer, PreparedStatement> statements = writeTokens.get(writeToken);
                 if(statements == null) {
                     //TODO throw new Exception("Unintialized Write Token");
                 }
 
+                long timestampMillis = bgpUpdate.getTimestamp();
+                Timestamp timeBucket = new Timestamp(timestampMillis - (timestampMillis % (86400 * 1000)));
+                UUID timestamp = new UUID(UUIDs.startOf(timestampMillis).getMostSignificantBits(), random.nextLong());
+
                 //loop over statements to insert data
                 for(Map.Entry<Integer, PreparedStatement> entry : statements.entrySet()) {
-                    BoundStatement bound = null;
+                    BatchStatement batch = new BatchStatement();
                     switch(entry.getKey()) {
                         case UPDATE_MESSAGES_BY_TIME:
-                            bound = entry.getValue().bind(
-                                        //time_bucket
-                                        //timestamp
-                                        //advertised_prefixes
-                                        //as_path
-                                        //collector_ip_address
-                                        //collector_mac_address
-                                        //collector_port
-                                        //next_hop
-                                        //peer_ip_address
-                                        //withdrawn_prefixes
-                                    );
+                            try {
+                                batch.add(
+                                    entry.getValue().bind(
+                                        timeBucket, //time_bucket
+                                        timestamp, //timestamp
+                                        null, //TODO advertised_prefixes
+                                        bgpUpdate.getAsPathList(), //as_path
+                                        InetAddress.getByName(bgpUpdate.getCollectorIpAddress()), //collector_ip_address
+                                        bgpUpdate.getCollectorMacAddress(), //collector_mac_address
+                                        bgpUpdate.getCollectorPort(), //collector_port
+                                        bgpUpdate.getNextHop() != null ? InetAddress.getByName(bgpUpdate.getNextHop()) : null, //next_hop
+                                        InetAddress.getByName(bgpUpdate.getPeerIpAddress()), //peer_ip_address
+                                        null //TODO withdrawn_prefixes
+                                    )
+                                );
+                            } catch(Exception e) {
+                                e.printStackTrace();
+                                //TODO throw new Exception("");
+                            }
+
                             break;
                         case AS_NUMBER_BY_PREFIX_RANGE:
-                            bound = entry.getValue().bind(
-                                        //time_bucket
-                                        //prefix_ip_address
-                                        //prefix_mask
-                                        //timestamp
-                                        //as_number
+                            List<Integer> asPath = bgpUpdate.getAsPathList();
+                            int asNumber = asPath.get(asPath.size() - 1);
+
+                            for(IPPrefix ipPrefix : bgpUpdate.getAdvertisedPrefixList()) {
+                                try {
+                                    batch.add(
+                                        entry.getValue().bind(
+                                            timeBucket, //time_bucket
+                                            InetAddress.getByName(ipPrefix.getPrefixIpAddress()), //prefix_ip_address
+                                            ipPrefix.getPrefixMask(), //prefix_mask
+                                            timestamp, //timestamp
+                                            asNumber //as_number
+                                        )
                                     );
+                                } catch(Exception e) {
+                                    e.printStackTrace();
+                                    //TODO throw new Exception("");
+                                }
+                            }
 
                             break;
                         default:
                             //TODO throw new Exception("Unknown Statement Type");
                     }
 
-                    session.execute(bound);
+                    session.execute(batch);
                 }
                 break;
             default:
@@ -95,7 +127,7 @@ public class CassandraSession extends Session {
 
     @Override
     public String generateWriteToken(WriteType writeType) {
-        Map<String, PreparedStatement> statements = new HashMap<String, PreparedStatement>();
+        Map<Integer, PreparedStatement> statements = new HashMap<Integer, PreparedStatement>();
 
         //initialize prepared statements for write type
         switch(writeType) {
@@ -108,7 +140,8 @@ public class CassandraSession extends Session {
         }
 
         //add token to writeTokens
-        writeTokens.put(UUID.randomUUID().toString(), statements);
+        String writeToken = UUID.randomUUID().toString();
+        writeTokens.put(writeToken, statements);
         return writeToken;
     }
 
