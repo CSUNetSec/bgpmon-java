@@ -20,6 +20,8 @@ prefix hijack module
     query csu_bgp_core.update_messages_by_time for additional information
 
 write bgp
-    parse advertised/withdrawn prefixes
+    write collector mac
 
 don't let people see sessions that haven't created (username, password)
+
+don't let a session close if something else is using it

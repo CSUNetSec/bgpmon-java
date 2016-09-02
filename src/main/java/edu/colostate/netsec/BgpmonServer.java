@@ -271,6 +271,8 @@ public class BgpmonServer {
 
                 @Override
                 public void onError(Throwable t) {
+                    System.err.println(t);
+
                     //destory write tokens over all sessions
                     for(String sessionId : sessionWriteTokens.keySet()) {
                         Session session = sessions.get(sessionId);
@@ -291,6 +293,9 @@ public class BgpmonServer {
                             session.destroyWriteToken(writeToken);
                         }
                     }
+
+                    responseObserver.onNext(Empty.newBuilder().build());
+                    responseObserver.onCompleted();
                 }
             };
         }

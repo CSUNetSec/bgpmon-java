@@ -173,7 +173,7 @@ message BGPUpdate {
     uint32 collector_port = 4;
     string peer_ip_address = 5;
 
-    repeated uint32 as_path = 6;
+    repeated int64 as_path = 6;
     string next_hop = 7;
 
     repeated IPPrefix advertised_prefix = 8;
