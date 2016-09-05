@@ -30,18 +30,28 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
 
 public class PrefixHijackModule extends Module {
-    private static final String QUERY = "SELECT timestamp, dateOf(timestamp), prefix_ip_address, prefix_mask, as_number FROM csu_bgp_derived.as_number_by_prefix_range WHERE time_bucket=? AND prefix_ip_address>=? AND prefix_ip_address<=?";
+    private static final String AS_NUMBER_BY_PREFIX_RANGE = "SELECT timestamp, dateOf(timestamp), prefix_ip_address, prefix_mask, as_number FROM csu_bgp_derived.as_number_by_prefix_range WHERE time_bucket=? AND prefix_ip_address>=? AND prefix_ip_address<=?";
+    private static final String UPDATE_MESSAGES_BY_TIME = "SELECT collector_ip_address, as_path FROM csu_bgp_core.update_messages_by_time WHERE time_bucket=? and timestamp=?";
 
-    private Session session;
+    private com.datastax.driver.core.Session session;
+    private PreparedStatement asNumberByPrefixRange, updateMessagesByTime;
     private BgpmonOuterClass.PrefixHijackModule protobufModule;
     private Map<UUID, PrefixHijack> potentialHijacks = new HashMap<UUID, PrefixHijack>();
     private ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
     private List<MonitorPrefix> monitorPrefixes = new LinkedList<MonitorPrefix>();
 
-    public PrefixHijackModule(String moduleId, Session session, BgpmonOuterClass.PrefixHijackModule protobufModule, Map<String, Module> modules) {
-        super(moduleId, modules);
-        this.session = session;
+    public PrefixHijackModule(String moduleId, Session session, BgpmonOuterClass.PrefixHijackModule protobufModule, Map<String, Module> modules, String logDirectory) {
+        super(moduleId, modules, logDirectory);
         this.protobufModule = protobufModule;
+
+        //prepare queries
+        if(session instanceof CassandraSession) {
+            this.session = ((CassandraSession)session).getDatastaxSession();
+            asNumberByPrefixRange = this.session.prepare(AS_NUMBER_BY_PREFIX_RANGE);
+            updateMessagesByTime = this.session.prepare(UPDATE_MESSAGES_BY_TIME);
+        } else {
+            //TODO throw Exception("");
+        }
 
         //initialize monitored prefixes
         this.monitorPrefixes = new LinkedList<MonitorPrefix>();
@@ -81,25 +91,16 @@ public class PrefixHijackModule extends Module {
 
     @Override
     public void execute() {
-        com.datastax.driver.core.Session session = null;
-        if(this.session instanceof CassandraSession) {
-            session = ((CassandraSession)this.session).getDatastaxSession();
-        } else {
-            //TODO throw Exception("");
-        }
-
         long currentTime = System.currentTimeMillis();
         Timestamp timeBucket = new Timestamp(currentTime - (currentTime % (86400 * 1000)));
-
-        PreparedStatement prepared = session.prepare(QUERY);
 
         //loop over monitored prefixes
         for(MonitorPrefix monitorPrefix : this.monitorPrefixes) {
             //bind prepared statement
-            BoundStatement bound = prepared.bind(timeBucket, monitorPrefix.minInetAddress, monitorPrefix.maxInetAddress);
+            BoundStatement bound = asNumberByPrefixRange.bind(timeBucket, monitorPrefix.minInetAddress, monitorPrefix.maxInetAddress);
 
             //execute bound statement and add callback for completion
-            ResultSetFuture future = session.executeAsync(bound);
+            ResultSetFuture future = this.session.executeAsync(bound);
             Futures.addCallback(
                 future,
                 new FutureCallback<ResultSet>() {
@@ -134,9 +135,28 @@ public class PrefixHijackModule extends Module {
                             //add hijack to potential hijacks
                             rwl.writeLock().lock();
                             try {
-                                //TODO query csu_bgp_core.update_messages_by_time to get all other information from message (as path, collector_ip_address, etc)
+                                //query csu_bgp_core.update_messages_by_time for additional imformation
+                                BoundStatement bound = updateMessagesByTime.bind(timeBucket, timeuuid);
+                                Row coreRow = null;
+                                try {
+                                    ResultSet coreResultSet= session.executeAsync(bound).get();
+                                    coreRow = coreResultSet.one();
+                                } catch(Exception e) {
+                                    System.err.println("updateMessagesByTime query ERROR");
+                                    e.printStackTrace();
+                                    continue;
+                                    //TODO throw Exception
+                                }
+
+                                if(coreRow == null) {
+                                    continue; //TODO remove this once all data is inserted with this application (timeuuid's will match between update_messages_by_time and as_number_by_prefix_range
+                                }
+
+                                InetAddress collectorIp = coreRow.getInet("collector_ip_address");
+                                List<Long> asPath = coreRow.getList("as_path", Long.class);
+
                                 potentialHijacks.put(timeuuid, new PrefixHijack(timestamp, inetAddress, mask));
-                                System.out.println("\tHIJACK!:" + timeuuid + " -- " + asNumber + ":" + inetAddress + "/" + mask + " - " + timestamp + " FOR MONITORED " + monitorPrefix);
+                                logger.info("\tHIJACK!:" + timeuuid + " -- " + asNumber + ":" + inetAddress + "/" + mask + " - " + timestamp + " FOR MONITORED " + monitorPrefix);
                             } finally {
                                 rwl.writeLock().unlock();
                             }
@@ -145,7 +165,8 @@ public class PrefixHijackModule extends Module {
 
                     @Override
                     public void onFailure(Throwable t) {
-
+                        System.err.println("ResultSetFuture ERROR");
+                        t.printStackTrace();
                     }
                 },
                 MoreExecutors.sameThreadExecutor()

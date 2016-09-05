@@ -76,11 +76,13 @@ public class BgpmonServer {
     }
 
     private static class BgpmonService extends BgpmonImplBase {
+        private final String logDirectory;
         private Map<String, Session> sessions;
         private Map<String, Module> runningModules;
         private Map<String, Module> startedModules;
 
         public BgpmonService() {
+            logDirectory = "/tmp";
             this.sessions = new HashMap<String, Session>();
             this.runningModules = new HashMap<String, Module>();
             this.startedModules = new HashMap<String, Module>();
@@ -175,7 +177,7 @@ public class BgpmonServer {
                         //TODO throw new Exception("Unknown Session Id");
                     }
 
-                    module = new PrefixHijackModule(request.getModuleId(), session, request.getPrefixHijackModule(), runningModules);
+                    module = new PrefixHijackModule(request.getModuleId(), session, request.getPrefixHijackModule(), runningModules, logDirectory);
                     break;
                 default:
                     //TODO throw new Exception("Uknown Module Type");
@@ -203,7 +205,7 @@ public class BgpmonServer {
                         //TODO throw new Exception("Unknown Session Id");
                     }
 
-                    module = new PrefixHijackModule(request.getModuleId(), session, request.getPrefixHijackModule(), startedModules);
+                    module = new PrefixHijackModule(request.getModuleId(), session, request.getPrefixHijackModule(), startedModules, logDirectory);
                     break;
                 default:
                     //TODO throw new Exception("Unknown Module Type");

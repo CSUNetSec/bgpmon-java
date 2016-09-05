@@ -1,6 +1,8 @@
 apply plugin: 'java'
 apply plugin: 'com.google.protobuf'
 
+version = '0.1.0'
+
 //build repositories and dependencies
 repositories {
     mavenCentral()
@@ -56,4 +58,20 @@ task execute(type: JavaExec) {
     if(project.hasProperty('myArgs')) {
         args(myArgs.split(','))
     }
+}
+
+//build jars
+task serverJar(type: Jar) {
+    manifest {
+        attributes 'Implementation-title': 'BGPmon Server',
+            'Implementation-version': version,
+            'Main-class': 'edu.colostate.netsec.BgpmonServer'
+    }
+    baseName = project.name + '-server'
+    from {
+        configurations.compile.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
+    with jar
 }
