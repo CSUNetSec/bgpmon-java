@@ -20,6 +20,7 @@ public abstract class Module {
         this.modules = modules;
 
         logger = Logger.getLogger(moduleId);
+        logger.setUseParentHandlers(false);
         try {
             FileHandler fileHandler = new FileHandler(logDirectory + "/prefix-hijack-" + moduleId + ".log");
             logger.addHandler(fileHandler);

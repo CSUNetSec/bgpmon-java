@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.Level;
 
 import edu.colostate.netsec.BgpmonOuterClass;
 import edu.colostate.netsec.BgpmonOuterClass.IPPrefix;
@@ -142,10 +143,9 @@ public class PrefixHijackModule extends Module {
                                     ResultSet coreResultSet= session.executeAsync(bound).get();
                                     coreRow = coreResultSet.one();
                                 } catch(Exception e) {
-                                    System.err.println("updateMessagesByTime query ERROR");
-                                    e.printStackTrace();
+                                    //logger.log(Level.WARNING, "unable to complete csu_bgp_core.update_messages_by_time query");
+                                    //TODO e.printStackTrace();
                                     continue;
-                                    //TODO throw Exception
                                 }
 
                                 if(coreRow == null) {
@@ -156,7 +156,7 @@ public class PrefixHijackModule extends Module {
                                 List<Long> asPath = coreRow.getList("as_path", Long.class);
 
                                 potentialHijacks.put(timeuuid, new PrefixHijack(timestamp, inetAddress, mask));
-                                logger.info("\tHIJACK!:" + timeuuid + " -- " + asNumber + ":" + inetAddress + "/" + mask + " - " + timestamp + " FOR MONITORED " + monitorPrefix);
+                                logger.log(Level.INFO, "\tHIJACK!:" + timeuuid + " -- " + asNumber + ":" + inetAddress + "/" + mask + " - " + timestamp + " FOR MONITORED " + monitorPrefix);
                             } finally {
                                 rwl.writeLock().unlock();
                             }
@@ -165,8 +165,8 @@ public class PrefixHijackModule extends Module {
 
                     @Override
                     public void onFailure(Throwable t) {
-                        System.err.println("ResultSetFuture ERROR");
-                        t.printStackTrace();
+                        //logger.log(Level.WARNING, "unable to complete csu_bgp_derived.as_number_by_prefix_range query");
+                        //t.printStackTrace();
                     }
                 },
                 MoreExecutors.sameThreadExecutor()
