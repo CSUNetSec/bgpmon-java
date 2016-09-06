@@ -21,6 +21,7 @@ import edu.colostate.netsec.session.Session;
 import edu.colostate.netsec.session.CassandraSession;
 
 import com.datastax.driver.core.BoundStatement;
+import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.LocalDate;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
@@ -50,6 +51,9 @@ public class PrefixHijackModule extends Module {
             this.session = ((CassandraSession)session).getDatastaxSession();
             asNumberByPrefixRange = this.session.prepare(AS_NUMBER_BY_PREFIX_RANGE);
             updateMessagesByTime = this.session.prepare(UPDATE_MESSAGES_BY_TIME);
+
+            asNumberByPrefixRange.setConsistencyLevel(ConsistencyLevel.LOCAL_ONE);
+            updateMessagesByTime.setConsistencyLevel(ConsistencyLevel.LOCAL_ONE);
         } else {
             //TODO throw Exception("");
         }
@@ -140,7 +144,7 @@ public class PrefixHijackModule extends Module {
                                 BoundStatement bound = updateMessagesByTime.bind(timeBucket, timeuuid);
                                 Row coreRow = null;
                                 try {
-                                    ResultSet coreResultSet= session.executeAsync(bound).get();
+                                    ResultSet coreResultSet = session.executeAsync(bound).get();
                                     coreRow = coreResultSet.one();
                                 } catch(Exception e) {
                                     //logger.log(Level.WARNING, "unable to complete csu_bgp_core.update_messages_by_time query");
