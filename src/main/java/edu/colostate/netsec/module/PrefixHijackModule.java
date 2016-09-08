@@ -104,8 +104,49 @@ public class PrefixHijackModule extends Module {
             //bind prepared statement
             BoundStatement bound = asNumberByPrefixRange.bind(timeBucket, monitorPrefix.minInetAddress, monitorPrefix.maxInetAddress);
 
+            ResultSet resultSet = this.session.execute(bound);
+            Iterator<Row> iterator = resultSet.iterator();
+            while(iterator.hasNext()) {
+                Row row = iterator.next();
+
+                //check if valid advertisement
+                long asNumber = row.getLong("as_number");
+                if(monitorPrefix.asNumbers.contains(asNumber)) {
+                    continue;
+                }
+
+                //retrieve additional row eleemnts
+                UUID timeuuid = row.getUUID("timestamp");
+                Date timestamp = row.getTimestamp(1);
+                InetAddress inetAddress = row.getInet("prefix_ip_address");
+                int mask = row.getInt("prefix_mask");
+
+                //check for existance of potential hijack
+                if(potentialHijacks.containsKey(timeuuid)) {
+                    continue;
+                }
+
+                //add hijack to potential hijacks
+                potentialHijacks.put(timeuuid, new PrefixHijack(timestamp, inetAddress, mask));
+
+                //query csu_bgp_core.update_messages_by_time for additional imformation
+                BoundStatement coreBound = updateMessagesByTime.bind(timeBucket, timeuuid);
+                ResultSet coreResultSet = session.execute(bound);
+                Row coreRow = coreResultSet.one();
+
+                if(coreRow == null) {
+                    continue;
+                }
+
+                InetAddress collectorIp = coreRow.getInet("collector_ip_address");
+                List<Long> asPath = coreRow.getList("as_path", Long.class);
+
+                potentialHijacks.put(timeuuid, new PrefixHijack(timestamp, inetAddress, mask));
+                logger.log(Level.INFO, "\tHIJACK!:" + timeuuid + " -- " + asNumber + ":" + inetAddress + "/" + mask + " - " + timestamp + " FOR MONITORED " + monitorPrefix);
+            }
+
             //execute bound statement and add callback for completion
-            ResultSetFuture future = this.session.executeAsync(bound);
+            /*ResultSetFuture future = this.session.executeAsync(bound);
             Futures.addCallback(
                 future,
                 new FutureCallback<ResultSet>() {
@@ -174,7 +215,7 @@ public class PrefixHijackModule extends Module {
                     }
                 },
                 MoreExecutors.sameThreadExecutor()
-            );
+            );*/
         }
     }
 

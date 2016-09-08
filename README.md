@@ -16,7 +16,6 @@ gradle -PmainClass='edu.colostate.netsec.BgpmonClient' -PmyArgs='write,mrt-file,
 ##TODO
 prefix hijack module
     run on today and yesterday (data isn't being inserted quckly enough)
-    log failed queries (cassandra gets overloaded)
     error handling - should execute() throw Exception?
 
 write bgp
